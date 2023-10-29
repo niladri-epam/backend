@@ -1,70 +1,90 @@
 'use strict';
 const AWS = require('aws-sdk')
 const csv = require('csv-parser');
-
+const s3 = new AWS.S3();
 const importFileParser = async (event) => {
-    const S3 = new AWS.S3();
-    const record = event.Records[0]; 
-
+  try {
+    const record = event.Records[0];
     if (!record) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'No File Found' }),
       };
     }
-  
-    const { s3 } = record;
-    const bucket = s3.bucket.name;
-    const key = s3.object.key;
-  
-    const params = {
+
+    const bucket = record.s3.bucket.name;
+    const key = record.s3.object.key;
+
+    const s3Stream = s3.getObject({
       Bucket: bucket,
       Key: key,
-    };
-  
-    console.log('params: ', params)
-    const s3Stream = S3.getObject(params).createReadStream();
-    s3Stream
-      .pipe(csv())
-      .on('data', (data) => {
-        console.log(data);
-      })
-      .on('end', () => {
-        console.log('Done Reading File');
-      });
-  
+    }).createReadStream();
+
+    return new Promise((resolve, reject) => {
+      s3Stream
+        .pipe(csv())
+        .on('data', (data) => {
+          console.log("csv data: ");
+          console.log(data);
+        })
+        .on('end', () => {
+          console.log('Done Reading File');
+          console.log(JSON.stringify(csvData));
+          resolve({
+            statusCode: 200,
+            body: JSON.stringify({message: 'success'}),
+          });
+        })
+        .on('error', (error) => {
+          console.error('error: ', error);
+          reject({
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal Server Error' }),
+          });
+        });
+    });
+  } catch (error) {
+    console.error('error: ', error);
     return {
-      statusCode: 200,
-      body: JSON.stringify({ records: records }),
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal Server Error' }),
     };
+  }
 };
 
 
 const importProductsFile = async (event) => {
-    const S3 = new AWS.S3();
-    const { queryStringParameters } = event;
-  
-    if ((!'name' in queryStringParameters)) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ message: 'name query param is required' }),
-        };
-    }
+  try {
+      const { queryStringParameters } = event;
     
-    const url = await S3.getSignedUrl('putObject', {
-        Bucket: 'epam-uploaded',
-        Key: `uploaded/${queryStringParameters.name}`,
-        Expires: 300, 
-        ContentType: 'application/csv',
-    });
+      if ((!'name' in queryStringParameters)) {
+          return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'name is required' }),
+          };
+      }
+      
+      const url = await s3.getSignedUrl('putObject', {
+          Bucket: 'epam-uploaded',
+          Key: `uploaded/${queryStringParameters.name}`,
+          Expires: 300, 
+          ContentType: 'application/csv',
+      });
 
-    return {
-        statusCode: 200,
-        headers: {
-            "Access-Control-Allow-Origin": "*",
-          },
-      body: JSON.stringify({ url }),
-    };
+      return {
+          statusCode: 200,
+          headers: {
+              "Access-Control-Allow-Origin": "*",
+            },
+        body: JSON.stringify({ url }),
+      };
+    } catch (error) {
+      console.error('error: ', error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Internal Server Error' }),
+      };
+    }
 }
 
 module.exports = {
