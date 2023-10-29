@@ -1,0 +1,38 @@
+app: aws-node-project
+service: import-service
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: ap-south-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+      Resource:
+        - "arn:aws:s3:::epam-uploaded/uploaded/*"
+
+functions:
+  importProductsFile:
+    handler: src/upload.importProductsFile
+    events:
+      - http:
+          path: /import
+          method: GET
+          cors:
+            origin: "*"
+          request:
+            parameters:
+              querystrings:
+                name: true
+  importFileParser:
+    handler: src/upload.importFileParser
+    events:
+      - s3:
+          bucket: epam-uploaded
+          event: s3:ObjectCreated:*
+          rules:
+            - prefix: uploaded/
+          existing: true
