@@ -12,8 +12,10 @@ provider:
       Action:
         - s3:PutObject
         - s3:GetObject
+        - sqs:SendMessage
       Resource:
-        - "arn:aws:s3:::epam-uploaded/uploaded/*"
+        - arn:aws:s3:::epam-uploaded/uploaded/*
+        - arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue
 
 functions:
   importProductsFile:

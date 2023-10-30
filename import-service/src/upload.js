@@ -2,6 +2,7 @@
 const AWS = require('aws-sdk')
 const csv = require('csv-parser');
 const s3 = new AWS.S3();
+const sqs = new AWS.SQS();
 const importFileParser = async (event) => {
   try {
     const record = event.Records[0];
@@ -24,12 +25,12 @@ const importFileParser = async (event) => {
       s3Stream
         .pipe(csv())
         .on('data', (data) => {
-          console.log("csv data: ");
-          console.log(data);
+          sqs.sendMessage({
+            QueueUrl: 'https://sqs.ap-south-1.amazonaws.com/749453116506/catalogItemsQueue',
+            MessageBody: JSON.stringify({message: "hello"}),
+          }).promise();
         })
         .on('end', () => {
-          console.log('Done Reading File');
-          console.log(JSON.stringify(csvData));
           resolve({
             statusCode: 200,
             body: JSON.stringify({message: 'success'}),
