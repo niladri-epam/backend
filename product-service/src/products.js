@@ -1,5 +1,6 @@
 'use strict';
 const AWS = require('aws-sdk')
+const sns = new AWS.SNS();
 const {v4} = require('uuid')
 
 const dynamodb = new AWS.DynamoDB.DocumentClient();
@@ -73,6 +74,43 @@ const getProductsById = async (event) => {
   };
 };
 
+const catalogBatchProcess = async (event) => {
+  try {
+    const records = event.Records;
+
+    for (const record of records) {
+      const body = JSON.parse(record.body);
+      console.log('catalogBatchProcess: ', body)
+
+      const id = v4()
+      
+      const product = {
+        id,
+        title: body.title,
+        description: body.description,
+        price: body.price
+      };
+
+      await dynamodb.put({
+        TableName: "products",
+        Item: product
+      }).promise();
+
+      await sns.publish({
+        TopicArn: 'arn:aws:sns:ap-south-1:749453116506:---',
+        Message: JSON.stringify({ message: `Product added id: ${id}, title: ${body.title}`}), 
+      }).promise();
+    }
+  
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: "Processed successfully" }),
+    };
+  } catch (err) {
+    console.log('err: catalogbatchprocess: ', err)
+  }
+};
+
 module.exports = {
-  getProductsList, getProductsById, createProduct
+  getProductsList, getProductsById, createProduct, catalogBatchProcess
 }
