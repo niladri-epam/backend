@@ -11,12 +11,14 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - dynamodb:*
-        - sqs:*
+        - "dynamodb:*"
+        - "sqs:*"
+        - "sns:*"
       Resource:
-        - arn:aws:dynamodb:ap-south-1:749453116506:table/products
-        - arn:aws:dynamodb:ap-south-1:749453116506:table/stocks
-        - arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue
+        - "arn:aws:dynamodb:ap-south-1:749453116506:table/products"
+        - "arn:aws:dynamodb:ap-south-1:749453116506:table/stocks"
+        - "arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue"
+        - "arn:aws:sns:ap-south-1:749453116506:product-service-dev-CreateProductTopic-26nOXflBk40O"
 
 functions:
   getProductsList:
@@ -55,10 +57,7 @@ functions:
     handler: src/products.catalogBatchProcess
     events:
       - sqs:
-          arn:
-            Fn::GetAtt:
-              - catalogItemsQueue
-              - Arn
+          arn: "arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue"
           batchSize: 5
 
 resources:
@@ -89,10 +88,6 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
-    catalogItemsQueue:
-      Type: "AWS::SQS::Queue"
-      Properties:
-        QueueName: catalogItemsQueue
     CreateProductTopic:
       Type: "AWS::SNS::Topic"
       Properties:

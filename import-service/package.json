@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.1479.0",
-    "csv-parser": "^3.0.0"
+    "csv-parser": "^3.0.0",
+    "uuid": "^9.0.1"
   }
 }

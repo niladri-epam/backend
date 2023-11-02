@@ -77,30 +77,38 @@ const getProductsById = async (event) => {
 const catalogBatchProcess = async (event) => {
   try {
     const records = event.Records;
-
+    let totalProducts = []
     for (const record of records) {
-      const body = JSON.parse(record.body);
-      console.log('catalogBatchProcess: ', body)
 
-      const id = v4()
-      
-      const product = {
-        id,
-        title: body.title,
-        description: body.description,
-        price: body.price
-      };
-
-      await dynamodb.put({
-        TableName: "products",
-        Item: product
-      }).promise();
-
-      await sns.publish({
-        TopicArn: 'arn:aws:sns:ap-south-1:749453116506:---',
-        Message: JSON.stringify({ message: `Product added id: ${id}, title: ${body.title}`}), 
-      }).promise();
+      if ('body' in record) {
+        const d = JSON.parse(record.body)
+        const data = d.message
+        if ('title' in data && 'price' in data && 'description' in data && 'id' in data) {
+          const productExists = await dynamodb.get({ TableName: "products", Key: { id: data.id } }).promise()
+          
+          if (!productExists.Item) {
+            const product = {
+              id: data.id,
+              title: data.title,
+              description: data.description,
+              price: data.price
+            };
+  
+            await dynamodb.put({
+            TableName: "products",
+            Item: product
+            }).promise();
+            
+            totalProducts.push(`id: ${data.id}, title: ${data.title}, price: ${data.price}`)
+          }
+        }
+      }
     }
+
+    await sns.publish({
+        TopicArn: 'arn:aws:sns:ap-south-1:749453116506:product-service-dev-CreateProductTopic-26nOXflBk40O',
+        Message: JSON.stringify({ message: `Product Info: ${totalProducts.join(", ")}`}), 
+    }).promise();
   
     return {
       statusCode: 200,

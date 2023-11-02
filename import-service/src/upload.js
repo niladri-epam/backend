@@ -3,6 +3,7 @@ const AWS = require('aws-sdk')
 const csv = require('csv-parser');
 const s3 = new AWS.S3();
 const sqs = new AWS.SQS();
+const {v4} = require('uuid')
 const importFileParser = async (event) => {
   try {
     const record = event.Records[0];
@@ -21,14 +22,26 @@ const importFileParser = async (event) => {
       Key: key,
     }).createReadStream();
 
-    return new Promise((resolve, reject) => {
+    const processedData = []
+
+    await new Promise((resolve, reject) => {
       s3Stream
         .pipe(csv())
-        .on('data', (data) => {
-          sqs.sendMessage({
-            QueueUrl: 'https://sqs.ap-south-1.amazonaws.com/749453116506/catalogItemsQueue',
-            MessageBody: JSON.stringify({message: "hello"}),
-          }).promise();
+        .on('data', async (data) => {
+          if (Object.keys(data).length === 3 && data['_1'] !== 'title') {
+            let obj = {}
+            for (let key in data) {
+              if (key === '_1') {
+                obj['description'] = data[key]
+              } else if (key === '_2') {
+                obj['price'] = data[key]
+              } else {
+                obj['title'] = data[key]
+              }
+            }
+            processedData.push(obj)
+          }
+          
         })
         .on('end', () => {
           resolve({
@@ -44,6 +57,21 @@ const importFileParser = async (event) => {
           });
         });
     });
+    if (processedData.length > 6) {
+      console.log(`Products should not be more than 5 records`);
+      return
+    }
+
+    for (let i = 0; i < processedData.length; i++) {
+      const result = await sqs.sendMessage({
+        QueueUrl: 'https://sqs.ap-south-1.amazonaws.com/749453116506/catalogItemsQueue',
+        MessageBody: JSON.stringify({ message: {...processedData[i], id: v4()} })
+      }, (err, data) => {
+        if (err) {
+          console.log(`sendMessage Error ${err.toString()}`)
+        }
+      }).promise();
+    }
   } catch (error) {
     console.error('error: ', error);
     return {
