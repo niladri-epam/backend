@@ -7,13 +7,18 @@ provider:
   runtime: nodejs18.x
   stage: dev
   region: ap-south-1
+  tracing: {}
+
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - s3:PutObject
-        - s3:GetObject
-      Resource:
-        - "arn:aws:s3:::epam-uploaded/uploaded/*"
+        - "s3:PutObject"
+        - "s3:GetObject"
+      Resource: "arn:aws:s3:::epam-uploaded/uploaded/*"
+    - Effect: Allow
+      Action:
+        - "sqs:SendMessage"
+      Resource: "arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue"
 
 functions:
   importProductsFile:
@@ -37,3 +42,10 @@ functions:
           rules:
             - prefix: uploaded/
           existing: true
+
+resources:
+  Resources:
+    catalogItemsQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: "catalogItemsQueue"

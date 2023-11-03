@@ -11,10 +11,14 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - dynamodb:*
+        - "dynamodb:*"
+        - "sqs:*"
+        - "sns:*"
       Resource:
-        - arn:aws:dynamodb:ap-south-1:749453116506:table/products
-        - arn:aws:dynamodb:ap-south-1:749453116506:table/stocks
+        - "arn:aws:dynamodb:ap-south-1:749453116506:table/products"
+        - "arn:aws:dynamodb:ap-south-1:749453116506:table/stocks"
+        - "arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue"
+        - "arn:aws:sns:ap-south-1:749453116506:product-service-dev-CreateProductTopic-26nOXflBk40O"
 
 functions:
   getProductsList:
@@ -49,6 +53,12 @@ functions:
           method: put
           cors:
             origin: "*"
+  catalogBatchProcess:
+    handler: src/products.catalogBatchProcess
+    events:
+      - sqs:
+          arn: "arn:aws:sqs:ap-south-1:749453116506:catalogItemsQueue"
+          batchSize: 5
 
 resources:
   Resources:
@@ -78,3 +88,14 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 5
           WriteCapacityUnits: 5
+    CreateProductTopic:
+      Type: "AWS::SNS::Topic"
+      Properties:
+        DisplayName: "Product Created Notification"
+    CreateProductEmailSubscription:
+      Type: "AWS::SNS::Subscription"
+      Properties:
+        Protocol: "email"
+        TopicArn:
+          Ref: "CreateProductTopic"
+        Endpoint: "niladri_mahato@epam.com"
