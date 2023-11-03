@@ -77,7 +77,6 @@ const getProductsById = async (event) => {
 const catalogBatchProcess = async (event) => {
   try {
     const records = event.Records;
-    let totalProducts = []
     for (const record of records) {
 
       if ('body' in record) {
@@ -99,16 +98,14 @@ const catalogBatchProcess = async (event) => {
             Item: product
             }).promise();
             
-            totalProducts.push(`id: ${data.id}, title: ${data.title}, price: ${data.price}`)
+            await sns.publish({
+              TopicArn: 'arn:aws:sns:ap-south-1:749453116506:product-service-dev-CreateProductTopic-26nOXflBk40O',
+              Message: `id: ${data.id}, title: ${data.title}, price: ${data.price}`, 
+          }).promise();
           }
         }
       }
     }
-
-    await sns.publish({
-        TopicArn: 'arn:aws:sns:ap-south-1:749453116506:product-service-dev-CreateProductTopic-26nOXflBk40O',
-        Message: JSON.stringify({ message: `Product Info: ${totalProducts.join(", ")}`}), 
-    }).promise();
   
     return {
       statusCode: 200,
