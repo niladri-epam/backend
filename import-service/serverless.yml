@@ -33,6 +33,8 @@ functions:
             parameters:
               querystrings:
                 name: true
+          authorizer:
+            name: authorization-service-dev-basicAuthorizer
   importFileParser:
     handler: src/upload.importFileParser
     events:
