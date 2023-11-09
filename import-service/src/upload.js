@@ -81,11 +81,17 @@ const importFileParser = async (event) => {
   }
 };
 
-
 const importProductsFile = async (event) => {
   try {
-      const { queryStringParameters } = event;
+    const { queryStringParameters } = event;
     
+    if (!queryStringParameters) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'name query is required' }),
+      };
+    }
+
       if ((!'name' in queryStringParameters)) {
           return {
             statusCode: 500,
