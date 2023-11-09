@@ -8,6 +8,12 @@ provider:
   stage: dev
   region: ap-south-1
   tracing: {}
+  httpApi:
+    cors: true
+    authorizers:
+      authorizerForImport:
+        type: request
+        functionArn: arn:aws:lambda:ap-south-1:749453116506:function:authorization-service-dev-basicAuthorizer
 
   iamRoleStatements:
     - Effect: Allow
@@ -24,15 +30,11 @@ functions:
   importProductsFile:
     handler: src/upload.importProductsFile
     events:
-      - http:
+      - httpApi:
           path: /import
-          method: GET
-          cors:
-            origin: "*"
-          request:
-            parameters:
-              querystrings:
-                name: true
+          method: get
+          authorizer:
+            name: authorizerForImport
   importFileParser:
     handler: src/upload.importFileParser
     events:
